@@ -1,0 +1,5 @@
+git_url("https://github.com/RanbijaySinghDeo/TraceWay-Certificates.git")
+
+storage_mode("git")
+
+type("appstore")

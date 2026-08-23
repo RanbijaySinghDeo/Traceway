@@ -1,42 +1,24 @@
-name: Reusable iOS Test
+name: Main
 
 on:
-  workflow_call:
-    inputs:
-      simulator:
-        description: "Simulator to test on"
-        required: true
-        type: string
-
-      configuration:
-        description: "Build configuration"
-        required: false
-        default: "Debug"
-        type: string
-
-    outputs:
-      test-result:
-        description: "Result of the test"
-        value: ${{ jobs.test.outputs.result }}
+  push:
+    branches:
+      - main
 
 jobs:
-  test:
+  unit-tests:
+    name: Unit Tests
     runs-on: macos-latest
 
-    outputs:
-      result: ${{ steps.test-result.outputs.result }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+  beta:
+    name: Build & Upload to TestFlight
+    needs: unit-tests
+    runs-on: macos-latest
 
     steps:
-      - name: Show Input
-        run: |
-          echo "Simulator: ${{ inputs.simulator }}"
-          echo "Configuration: ${{ inputs.configuration }}"
-
-      - name: Run Test
-        run: |
-          echo "Running tests on ${{ inputs.simulator }}"
-          echo "Configuration: ${{ inputs.configuration }}"
-
-      - name: Set Test Result
-        id: test-result
-        run: echo "result=PASSED" >> "$GITHUB_OUTPUT"
+      - name: Checkout code
+        uses: actions/checkout@v4
