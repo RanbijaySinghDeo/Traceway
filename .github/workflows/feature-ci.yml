@@ -15,19 +15,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-     - name: Setup Ruby
-       uses: ruby/setup-ruby@v1
-       with:
-        ruby-version: '4.0.5'
-        bundler-cache: true
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0.5'
+          bundler-cache: true
 
       - name: Run Unit Tests
         run: bundle exec fastlane unit_tests
 
-
   build:
     name: Build
-    needs: unit-tests
     runs-on: macos-latest
 
     steps:
@@ -35,18 +33,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Ruby
-       uses: ruby/setup-ruby@v1
-       with:
-        ruby-version: '4.0.5'
-        bundler-cache: true
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0.5'
+          bundler-cache: true
 
       - name: Build App
         run: bundle exec fastlane build
 
-
   lint:
     name: SwiftLint
-    needs: build
     runs-on: macos-latest
 
     steps:
@@ -54,10 +50,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Ruby
-       uses: ruby/setup-ruby@v1
-       with:
-        ruby-version: '4.0.5'
-        bundler-cache: true
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0.5'
+          bundler-cache: true
 
       - name: Run SwiftLint
         run: bundle exec fastlane lint
