@@ -50,6 +50,7 @@ platform :ios do
 
     match(
       type: "appstore",
+      app_identifier: "com.ranbijay.TraceWay",
       api_key: api_key
     )
 
