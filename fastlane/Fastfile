@@ -2,19 +2,22 @@ default_platform(:ios)
 
 platform :ios do
 
-lane :match_setup do
-  api_key = app_store_connect_api_key(
-    key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
-    issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
-    key_filepath: ENV["APP_STORE_CONNECT_KEY_PATH"]
-  )
+  def app_store_connect_api_key
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_KEY_PATH"]
+    )
+  end
 
-  match(
-    type: "appstore",
-    app_identifier: "com.ranbijay.TraceWay",
-    api_key: api_key
-  )
-end
+  desc "Setup code signing"
+  lane :match_setup do
+    match(
+      type: "appstore",
+      app_identifier: "com.ranbijay.TraceWay",
+      api_key: app_store_connect_api_key
+    )
+  end
 
   desc "Run unit tests"
   lane :unit_tests do
@@ -34,25 +37,24 @@ end
 
   desc "Build TraceWay"
   lane :build do
-    gym(
-      project: "TraceWay.xcodeproj",
-      scheme: "TraceWay",
-      export_method: "app-store"
-    )
-  end
+  gym(
+    project: "TraceWay.xcodeproj",
+    scheme: "TraceWay",
+    export_method: "app-store",
+    export_options: {
+      provisioningProfiles: {
+        "com.ranbijay.TraceWay" => "match AppStore com.ranbijay.TraceWay"
+      }
+    }
+  )
+ end
 
   desc "Build and upload to TestFlight"
   lane :beta do
-    api_key = app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
-      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
-      key_filepath: ENV["APP_STORE_CONNECT_KEY_PATH"]
-    )
-
     match(
       type: "appstore",
       app_identifier: "com.ranbijay.TraceWay",
-      api_key: api_key
+      api_key: app_store_connect_api_key
     )
 
     build_app(
@@ -62,7 +64,7 @@ end
     )
 
     upload_to_testflight(
-      api_key: api_key,
+      api_key: app_store_connect_api_key,
       skip_waiting_for_build_processing: true
     )
   end
