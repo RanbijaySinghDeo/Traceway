@@ -50,6 +50,8 @@ final class RouteStoreTests: XCTestCase {
         XCTAssertEqual(saved.name, "Home → Office")
         XCTAssertEqual(saved.orderedPoints.count, 2)
         XCTAssertEqual(saved.quality, .fair)
+        XCTAssertEqual(saved.source, .recorded)
+        XCTAssertNotNil(saved.shareID)
 
         try store.rename(saved, to: "Home to Office")
         XCTAssertEqual(saved.name, "Home to Office")

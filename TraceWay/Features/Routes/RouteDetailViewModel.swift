@@ -73,34 +73,6 @@ final class RouteDetailViewModel {
         }
     }
 
-    func shareViaWhatsApp() {
-        let opened = RouteShareLinks.shareViaWhatsApp(
-            routeName: routeName,
-            coordinates: coordinates,
-            distanceMeters: route.distanceMeters,
-            durationSeconds: route.durationSeconds
-        )
-        if !opened {
-            errorMessage = "WhatsApp is not available on this device."
-        }
-    }
-
-    func openInAppleMaps() {
-        guard let start = startCoordinate, let end = endCoordinate else {
-            errorMessage = "This route is missing start or end coordinates."
-            return
-        }
-        ExternalMapsOpener.openInAppleMaps(start: start, end: end)
-    }
-
-    func openInGoogleMaps() {
-        guard let start = startCoordinate, let end = endCoordinate else {
-            errorMessage = "This route is missing start or end coordinates."
-            return
-        }
-        ExternalMapsOpener.openInGoogleMaps(start: start, end: end)
-    }
-
     func saveName() {
         do {
             try routeStore.rename(route, to: routeName)

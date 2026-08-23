@@ -1,0 +1,60 @@
+name: Feature CI
+
+on:
+  push:
+    branches:
+      - "feature/**"
+
+jobs:
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Run Unit Tests
+        run: bundle exec fastlane unit_tests
+
+
+  build:
+    name: Build
+    needs: unit-tests
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Build App
+        run: bundle exec fastlane build
+
+
+  lint:
+    name: SwiftLint
+    needs: build
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Run SwiftLint
+        run: bundle exec fastlane lint

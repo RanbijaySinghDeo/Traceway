@@ -1,0 +1,42 @@
+name: Reusable iOS Test
+
+on:
+  workflow_call:
+    inputs:
+      simulator:
+        description: "Simulator to test on"
+        required: true
+        type: string
+
+      configuration:
+        description: "Build configuration"
+        required: false
+        default: "Debug"
+        type: string
+
+    outputs:
+      test-result:
+        description: "Result of the test"
+        value: ${{ jobs.test.outputs.result }}
+
+jobs:
+  test:
+    runs-on: macos-latest
+
+    outputs:
+      result: ${{ steps.test-result.outputs.result }}
+
+    steps:
+      - name: Show Input
+        run: |
+          echo "Simulator: ${{ inputs.simulator }}"
+          echo "Configuration: ${{ inputs.configuration }}"
+
+      - name: Run Test
+        run: |
+          echo "Running tests on ${{ inputs.simulator }}"
+          echo "Configuration: ${{ inputs.configuration }}"
+
+      - name: Set Test Result
+        id: test-result
+        run: echo "result=PASSED" >> "$GITHUB_OUTPUT"

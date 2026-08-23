@@ -20,7 +20,7 @@ struct RootView: View {
                 RoutesListView()
             }
             .tabItem {
-                Label("My Routes", systemImage: "list.bullet")
+                Label("Routes", systemImage: "list.bullet")
             }
         }
         .toolbarBackground(TraceWayTheme.surface, for: .tabBar)
