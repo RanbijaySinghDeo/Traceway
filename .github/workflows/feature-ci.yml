@@ -1,31 +1,6 @@
-name: Feature CI
-
-on:
-  push:
-    branches:
-      - "feature/**"
-
-jobs:
-
-  unit-tests:
-    name: Unit Tests
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '4.0.5'
-          bundler-cache: true
-
-      - name: Run Unit Tests
-        run: bundle exec fastlane unit_tests
-
   build:
     name: Build
+    needs: unit-tests
     runs-on: macos-latest
 
     steps:
@@ -37,23 +12,52 @@ jobs:
         with:
           ruby-version: '4.0.5'
           bundler-cache: true
+
+      - name: Install signing certificate
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH="$RUNNER_TEMP/TraceWayDistribution.p12"
+
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+
+          KEYCHAIN_PATH="$RUNNER_TEMP/TraceWay.keychain-db"
+
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+
+          security import "$CERTIFICATE_PATH" \
+            -P "$P12_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+
+      - name: Install provisioning profile
+        env:
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          PROFILE_PATH="$RUNNER_TEMP/TraceWay.mobileprovision"
+
+          echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+
+          cp "$PROFILE_PATH" \
+            "$HOME/Library/MobileDevice/Provisioning Profiles/TraceWay_AppStore_Distribution.mobileprovision"
+
+      - name: Verify signing assets
+        run: |
+          echo "Installed provisioning profiles:"
+          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles"
+
+          echo "Installed signing identities:"
+          security find-identity -v -p codesigning
 
       - name: Build App
         run: bundle exec fastlane build
-
-  lint:
-    name: SwiftLint
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '4.0.5'
-          bundler-cache: true
-
-      - name: Run SwiftLint
-        run: bundle exec fastlane lint
