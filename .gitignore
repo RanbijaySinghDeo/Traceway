@@ -35,6 +35,7 @@ fastlane/swiftlint-report.txt
 # Ruby / Bundler
 .vendor/
 .bundle/
+vendor/bundle/
 
 # macOS
 .DS_Store
