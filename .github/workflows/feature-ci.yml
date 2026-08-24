@@ -113,14 +113,32 @@ jobs:
                 -showBuildSettings \
                 | grep -E "CODE_SIGN|PROVISIONING|DEVELOPMENT_TEAM" || true
                 
-          - name: Build App
-            env:
-              APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-              APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-              APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
-            run: |
-              echo "=== Starting Fastlane Build ==="
-              bundle exec fastlane build
+            - name: Build App - Direct Xcode
+              timeout-minutes: 10
+              run: |
+                set -o pipefail
+
+                xcodebuild \
+                  -project TraceWay.xcodeproj \
+                  -scheme TraceWay \
+                  -configuration Release \
+                  -destination "generic/platform=iOS" \
+                  -archivePath "$RUNNER_TEMP/TraceWay.xcarchive" \
+                  archive \
+                  CODE_SIGN_STYLE=Manual \
+                  CODE_SIGN_IDENTITY="Apple Distribution" \
+                  DEVELOPMENT_TEAM="CEE6TR2ZHF" \
+                  PROVISIONING_PROFILE_SPECIFIER="match AppStore com.ranbijay.TraceWay" \
+                  | tee "$RUNNER_TEMP/xcodebuild-archive.log"
+                            
+#          - name: Build App
+#            env:
+#              APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+#              APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+#              APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+#            run: |
+#              echo "=== Starting Fastlane Build ==="
+#              bundle exec fastlane build
 
 #          - name: Build App
 #            env:
