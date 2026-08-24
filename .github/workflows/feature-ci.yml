@@ -1,149 +1,120 @@
 name: Feature CI
 
 on:
-    push:
-        branches:
-          - "feature/**"
+  push:
+    branches:
+      - "feature/**"
 
-    pull_request:
-        branches:
-          - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-    unit-tests:
-        name: Unit Tests
-        runs-on: macos-latest
-        timeout-minutes: 15
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.5"
+          bundler-cache: true
+
+      - name: Run Unit Tests
+        run: bundle exec fastlane unit_tests
 
 
-        steps:
-          - name: Checkout code
-            uses: actions/checkout@v4
+  lint:
+    name: SwiftLint
+    needs: unit-tests
+    runs-on: macos-latest
+    timeout-minutes: 15
 
-          - name: Setup Ruby
-            uses: ruby/setup-ruby@v1
-            with:
-              ruby-version: "4.0.5"
-              bundler-cache: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-          - name: Run Unit Tests
-            run: bundle exec fastlane unit_tests
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.5"
+          bundler-cache: true
 
+      - name: Install SwiftLint
+        run: brew install swiftlint
 
-    lint:
-        name: SwiftLint
-        needs: unit-tests
-        runs-on: macos-latest
-        timeout-minutes: 15
-
-
-        steps:
-          - name: Checkout code
-            uses: actions/checkout@v4
-
-          - name: Setup Ruby
-            uses: ruby/setup-ruby@v1
-            with:
-              ruby-version: "4.0.5"
-              bundler-cache: true
-
-          - name: Install SwiftLint
-            run: brew install swiftlint
-
-          - name: Run SwiftLint
-            run: bundle exec fastlane lint
+      - name: Run SwiftLint
+        run: bundle exec fastlane lint
 
 
-    build:
-        name: Build
-        needs: lint
-        runs-on: macos-latest
-        timeout-minutes: 20
+  build:
+    name: Build
+    needs: lint
+    runs-on: macos-latest
+    timeout-minutes: 20
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        steps:
-          - name: Checkout code
-            uses: actions/checkout@v4
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.5"
+          bundler-cache: true
 
-          - name: Setup Ruby
-            uses: ruby/setup-ruby@v1
-            with:
-              ruby-version: "4.0.5"
-              bundler-cache: true
+      - name: Create App Store Connect API Key
+        env:
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: |
+          echo "$APP_STORE_CONNECT_KEY" > "$RUNNER_TEMP/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/AuthKey.p8"
 
-          - name: Create App Store Connect API Key
-            env:
-              APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
-            run: |
-              echo "$APP_STORE_CONNECT_KEY" > "$RUNNER_TEMP/AuthKey.p8"
-              chmod 600 "$RUNNER_TEMP/AuthKey.p8"
+      - name: Match signing
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: bundle exec fastlane match_setup
 
-          - name: Match signing
-            env:
-              APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-              APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-              APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
-              MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-              MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-            run: bundle exec fastlane match_setup
+      - name: Verify signing setup
+        run: |
+          echo "=== Code signing identities ==="
+          security find-identity -v -p codesigning
 
-          - name: Verify signing setup
-            run: |
-              echo "=== Code signing identities ==="
-              security find-identity -v -p codesigning
+          echo ""
+          echo "=== Xcode provisioning profiles ==="
+          ls -la "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/" || true
 
-              echo ""
-              echo "=== Xcode provisioning profiles ==="
-              ls -la "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/" || true
+          echo ""
+          echo "=== Installed provisioning profiles ==="
+          find "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+            -maxdepth 1 \
+            -type f \
+            -name "*.mobileprovision" \
+            -print || true
 
-              echo ""
-              echo "=== Installed provisioning profiles ==="
-              find "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
-                -maxdepth 1 \
-                -type f \
-                -name "*.mobileprovision" \
-                -print || true
+          echo ""
+          echo "=== Xcode signing settings ==="
+          xcodebuild \
+            -project TraceWay.xcodeproj \
+            -scheme TraceWay \
+            -configuration Release \
+            -showBuildSettings \
+            | grep -E "CODE_SIGN|PROVISIONING|DEVELOPMENT_TEAM" || true
 
-              echo ""
-              echo "=== Xcode signing settings ==="
-              xcodebuild \
-                -project TraceWay.xcodeproj \
-                -scheme TraceWay \
-                -configuration Release \
-                -showBuildSettings \
-                | grep -E "CODE_SIGN|PROVISIONING|DEVELOPMENT_TEAM" || true
-                
-          - name: Build App - Direct Xcode
-            timeout-minutes: 10
-            run: |
-                set -o pipefail
-
-                xcodebuild \
-                  -project TraceWay.xcodeproj \
-                  -scheme TraceWay \
-                  -configuration Release \
-                  -destination "generic/platform=iOS" \
-                  -archivePath "$RUNNER_TEMP/TraceWay.xcarchive" \
-                  archive \
-                  CODE_SIGN_STYLE=Manual \
-                  CODE_SIGN_IDENTITY="Apple Distribution" \
-                  DEVELOPMENT_TEAM="CEE6TR2ZHF" \
-                  PROVISIONING_PROFILE_SPECIFIER="match AppStore com.ranbijay.TraceWay" \
-                  | tee "$RUNNER_TEMP/xcodebuild-archive.log"
-                            
-#          - name: Build App
-#            env:
-#              APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-#              APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-#              APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
-#            run: |
-#              echo "=== Starting Fastlane Build ==="
-#              bundle exec fastlane build
-
-#          - name: Build App
-#            env:
-#              APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-#              APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-#              APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
-#            run: bundle exec fastlane build
-#
+      - name: Build App
+        timeout-minutes: 10
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+        run: bundle exec fastlane build
