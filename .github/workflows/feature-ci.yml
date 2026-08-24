@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "feature/**"
+
   pull_request:
     branches:
       - main
@@ -76,17 +77,17 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: bundle exec fastlane match_setup
-        
-        - name: Verify signing setup
-         run: |
-            echo "=== Code signing identities ==="
-            security find-identity -v -p codesigning
 
-            echo "=== Provisioning profiles ==="
-            ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || true
+      - name: Verify signing setup
+        run: |
+          echo "=== Code signing identities ==="
+          security find-identity -v -p codesigning
 
-            echo "=== Keychains ==="
-            security list-keychains
+          echo "=== Provisioning profiles ==="
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || true
+
+          echo "=== Keychains ==="
+          security list-keychains
 
       - name: Build App
         env:
