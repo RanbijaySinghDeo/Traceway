@@ -2,79 +2,92 @@ default_platform(:ios)
 
 platform :ios do
 
-  lane :match_setup do
-  match(
-    type: "appstore",
-    readonly: true,
-    api_key: app_store_connect_api_key
-  )
+desc "Run unit tests"
+lane :unit_tests do
+scan(
+project: "TraceWay.xcodeproj",
+scheme: "TraceWay"
+)
+end
 
-  sh("echo '=== Provisioning profiles after match ==='")
-  sh("ls -la ~/Library/MobileDevice/Provisioning\\ Profiles/ || true")
+desc "Run SwiftLint"
+lane :lint do
+swiftlint(
+mode: :lint,
+ignore_exit_status: true
+)
+end
 
-  sh("echo '=== Installed profiles ==='")
-  sh("find ~/Library/MobileDevice/Provisioning\\ Profiles -type f -maxdepth 1 -print 2>/dev/null || true")
-  end
+desc "Install signing certificates and provisioning profiles"
+lane :match_setup do
+api_key = app_store_connect_api_key(
+key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+key_filepath: ENV["APP_STORE_CONNECT_KEY_PATH"]
+)
 
-  desc "Run unit tests"
-  lane :unit_tests do
-    scan(
-      project: "TraceWay.xcodeproj",
-      scheme: "TraceWay"
-    )
-  end
 
-  desc "Run SwiftLint"
-  lane :lint do
-    swiftlint(
-      mode: :lint,
-      ignore_exit_status: true
-    )
-  end
+match(
+  type: "appstore",
+  app_identifier: "com.ranbijay.TraceWay",
+  readonly: true,
+  api_key: api_key
+)
 
-  desc "Build TraceWay"
-  lane :build do
-    gym(
-      project: "TraceWay.xcodeproj",
-      scheme: "TraceWay",
-      export_method: "app-store",
-      export_options: {
-        provisioningProfiles: {
-          "com.ranbijay.TraceWay" => "match AppStore com.ranbijay.TraceWay"
-        }
-      }
-    )
-  end
 
-  desc "Build and upload to TestFlight"
-  lane :beta do
-    api_key = app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
-      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
-      key_filepath: ENV["APP_STORE_CONNECT_KEY_PATH"]
-    )
+end
 
-    match(
-      type: "appstore",
-      app_identifier: "com.ranbijay.TraceWay",
-      api_key: api_key
-    )
+desc "Build TraceWay"
+lane :build do
+gym(
+project: "TraceWay.xcodeproj",
+scheme: "TraceWay",
+configuration: "Release",
+clean: true,
+export_method: "app-store",
+export_options: {
+provisioningProfiles: {
+"com.ranbijay.TraceWay" => "match AppStore com.ranbijay.TraceWay"
+}
+}
+)
+end
 
-    build_app(
-      project: "TraceWay.xcodeproj",
-      scheme: "TraceWay",
-      export_method: "app-store",
-      export_options: {
-        provisioningProfiles: {
-          "com.ranbijay.TraceWay" => "match AppStore com.ranbijay.TraceWay"
-        }
-      }
-    )
+desc "Build and upload to TestFlight"
+lane :beta do
+api_key = app_store_connect_api_key(
+key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+key_filepath: ENV["APP_STORE_CONNECT_KEY_PATH"]
+)
 
-    upload_to_testflight(
-      api_key: api_key,
-      skip_waiting_for_build_processing: true
-    )
-  end
+
+match(
+  type: "appstore",
+  app_identifier: "com.ranbijay.TraceWay",
+  readonly: true,
+  api_key: api_key
+)
+
+build_app(
+  project: "TraceWay.xcodeproj",
+  scheme: "TraceWay",
+  configuration: "Release",
+  clean: true,
+  export_method: "app-store",
+  export_options: {
+    provisioningProfiles: {
+      "com.ranbijay.TraceWay" => "match AppStore com.ranbijay.TraceWay"
+    }
+  }
+)
+
+upload_to_testflight(
+  api_key: api_key,
+  skip_waiting_for_build_processing: true
+)
+
+
+end
 
 end

@@ -1,97 +1,134 @@
 name: Feature CI
 
 on:
-  push:
-    branches:
-      - "feature/**"
+push:
+branches:
+- "feature/**"
 
-  pull_request:
-    branches:
-      - main
+pull_request:
+branches:
+- main
 
 jobs:
-  unit-tests:
-    name: Unit Tests
-    runs-on: macos-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+unit-tests:
+name: Unit Tests
+runs-on: macos-latest
+timeout-minutes: 15
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "4.0.5"
-          bundler-cache: true
 
-      - name: Run Unit Tests
-        run: bundle exec fastlane unit_tests
+steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
 
-  lint:
-    name: SwiftLint
-    needs: unit-tests
-    runs-on: macos-latest
+  - name: Setup Ruby
+    uses: ruby/setup-ruby@v1
+    with:
+      ruby-version: "4.0.5"
+      bundler-cache: true
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  - name: Run Unit Tests
+    run: bundle exec fastlane unit_tests
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "4.0.5"
-          bundler-cache: true
 
-      - name: Install SwiftLint
-        run: brew install swiftlint
+lint:
+name: SwiftLint
+needs: unit-tests
+runs-on: macos-latest
+timeout-minutes: 15
 
-      - name: Run SwiftLint
-        run: bundle exec fastlane lint
 
-  build:
-    name: Build
-    needs: lint
-    runs-on: macos-latest
+steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  - name: Setup Ruby
+    uses: ruby/setup-ruby@v1
+    with:
+      ruby-version: "4.0.5"
+      bundler-cache: true
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "4.0.5"
-          bundler-cache: true
+  - name: Install SwiftLint
+    run: brew install swiftlint
 
-      - name: Create App Store Connect API Key
-        env:
-          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
-        run: |
-          echo "$APP_STORE_CONNECT_KEY" > "$RUNNER_TEMP/AuthKey.p8"
+  - name: Run SwiftLint
+    run: bundle exec fastlane lint
 
-      - name: Match signing
-        env:
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-        run: bundle exec fastlane match_setup
 
-      - name: Verify signing setup
-        run: |
-          echo "=== Code signing identities ==="
-          security find-identity -v -p codesigning
+build:
+name: Build
+needs: lint
+runs-on: macos-latest
+timeout-minutes: 20
 
-          echo "=== Provisioning profiles ==="
-          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || true
 
-          echo "=== Keychains ==="
-          security list-keychains
+steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
 
-      - name: Build App
-        env:
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
-        run: bundle exec fastlane build
+  - name: Setup Ruby
+    uses: ruby/setup-ruby@v1
+    with:
+      ruby-version: "4.0.5"
+      bundler-cache: true
+
+  - name: Checkout signing setup
+    uses: actions/checkout@v4
+    with:
+      repository: ${{ github.repository }}
+      path: signing-check
+    continue-on-error: true
+
+  - name: Create App Store Connect API Key
+    env:
+      APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+    run: |
+      echo "$APP_STORE_CONNECT_KEY" > "$RUNNER_TEMP/AuthKey.p8"
+      chmod 600 "$RUNNER_TEMP/AuthKey.p8"
+
+  - name: Match signing
+    env:
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+    run: bundle exec fastlane match_setup
+
+  - name: Verify signing setup
+    run: |
+      echo "=== Code signing identities ==="
+      security find-identity -v -p codesigning
+
+      echo ""
+      echo "=== Provisioning profiles ==="
+      if [ -d "$HOME/Library/MobileDevice/Provisioning Profiles" ]; then
+        ls -la "$HOME/Library/MobileDevice/Provisioning Profiles"
+      else
+        echo "ERROR: No provisioning profiles directory found"
+        exit 1
+      fi
+
+      echo ""
+      echo "=== Installed provisioning profiles ==="
+      find "$HOME/Library/MobileDevice/Provisioning Profiles" \
+        -maxdepth 1 \
+        -type f \
+        -print
+
+      echo ""
+      echo "=== Xcode signing settings ==="
+      xcodebuild \
+        -project TraceWay.xcodeproj \
+        -scheme TraceWay \
+        -configuration Release \
+        -showBuildSettings \
+        | grep -E "CODE_SIGN|PROVISIONING|DEVELOPMENT_TEAM"
+
+  - name: Build App
+    env:
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+    run: bundle exec fastlane build
+
