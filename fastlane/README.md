@@ -15,14 +15,6 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 ## iOS
 
-### ios match_setup
-
-```sh
-[bundle exec] fastlane ios match_setup
-```
-
-
-
 ### ios unit_tests
 
 ```sh
@@ -31,14 +23,6 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 Run unit tests
 
-### ios build
-
-```sh
-[bundle exec] fastlane ios build
-```
-
-Build TraceWay
-
 ### ios lint
 
 ```sh
@@ -46,6 +30,22 @@ Build TraceWay
 ```
 
 Run SwiftLint
+
+### ios match_setup
+
+```sh
+[bundle exec] fastlane ios match_setup
+```
+
+Install signing certificates and provisioning profiles
+
+### ios build
+
+```sh
+[bundle exec] fastlane ios build
+```
+
+Build TraceWay
 
 ### ios beta
 

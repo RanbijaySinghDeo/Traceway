@@ -93,20 +93,16 @@ jobs:
               security find-identity -v -p codesigning
 
               echo ""
-              echo "=== Provisioning profiles ==="
-              if [ -d "$HOME/Library/MobileDevice/Provisioning Profiles" ]; then
-                ls -la "$HOME/Library/MobileDevice/Provisioning Profiles"
-              else
-                echo "ERROR: No provisioning profiles directory found"
-                exit 1
-              fi
+              echo "=== Xcode provisioning profiles ==="
+              ls -la "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/" || true
 
               echo ""
               echo "=== Installed provisioning profiles ==="
-              find "$HOME/Library/MobileDevice/Provisioning Profiles" \
+              find "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
                 -maxdepth 1 \
                 -type f \
-                -print
+                -name "*.mobileprovision" \
+                -print || true
 
               echo ""
               echo "=== Xcode signing settings ==="
@@ -115,7 +111,7 @@ jobs:
                 -scheme TraceWay \
                 -configuration Release \
                 -showBuildSettings \
-                | grep -E "CODE_SIGN|PROVISIONING|DEVELOPMENT_TEAM"
+                | grep -E "CODE_SIGN|PROVISIONING|DEVELOPMENT_TEAM" || true
 
           - name: Build App
             env:
