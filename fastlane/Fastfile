@@ -26,14 +26,14 @@ issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
 key_filepath: ENV["APP_STORE_CONNECT_KEY_PATH"]
 )
 
-
+```
 match(
   type: "appstore",
   app_identifier: "com.ranbijay.TraceWay",
   readonly: true,
   api_key: api_key
 )
-
+```
 
 end
 
@@ -61,7 +61,7 @@ issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
 key_filepath: ENV["APP_STORE_CONNECT_KEY_PATH"]
 )
 
-
+```
 match(
   type: "appstore",
   app_identifier: "com.ranbijay.TraceWay",
@@ -86,7 +86,7 @@ upload_to_testflight(
   api_key: api_key,
   skip_waiting_for_build_processing: true
 )
-
+```
 
 end
 
