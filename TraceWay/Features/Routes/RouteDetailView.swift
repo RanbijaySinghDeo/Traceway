@@ -13,7 +13,6 @@ struct RouteDetailView: View {
     let route: Route
     @State private var viewModel: RouteDetailViewModel?
     @State private var isSharePresented = false
-    @State private var isShareOptionsPresented = false
     @State private var confirmDelete = false
 
     var body: some View {
@@ -22,7 +21,6 @@ struct RouteDetailView: View {
                 RouteDetailContent(
                     viewModel: viewModel,
                     isSharePresented: $isSharePresented,
-                    isShareOptionsPresented: $isShareOptionsPresented,
                     confirmDelete: $confirmDelete,
                     onDeleted: { dismiss() }
                 )
@@ -46,105 +44,69 @@ struct RouteDetailView: View {
 private struct RouteDetailContent: View {
     @Bindable var viewModel: RouteDetailViewModel
     @Binding var isSharePresented: Bool
-    @Binding var isShareOptionsPresented: Bool
     @Binding var confirmDelete: Bool
     let onDeleted: () -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                RouteMapView(
-                    userCoordinate: nil,
-                    routeCoordinates: viewModel.coordinates,
-                    showsUserLocation: false,
-                    followUser: false,
-                    fitToRoute: true
-                )
-                .frame(height: 320)
-                .clipShape(RoundedRectangle(cornerRadius: TraceWayTheme.cornerRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: TraceWayTheme.cornerRadius, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
-                )
+        ZStack(alignment: .bottom) {
+            RouteMapView(
+                userCoordinate: nil,
+                routeCoordinates: viewModel.coordinates,
+                showsUserLocation: false,
+                followUser: false,
+                fitToRoute: true,
+                bottomContentInset: 280
+            )
+            .ignoresSafeArea(edges: .bottom)
 
-                VStack(alignment: .leading, spacing: 12) {
-                    if viewModel.isEditingName {
-                        TextField("Route name", text: $viewModel.routeName)
-                            .textFieldStyle(.plain)
-                            .padding(12)
-                            .background(TraceWayTheme.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .foregroundStyle(TraceWayTheme.textPrimary)
-                            .textInputAutocapitalization(.words)
+            // Soft fade so the overlay card sits cleanly on the map.
+            LinearGradient(
+                colors: [
+                    .clear,
+                    TraceWayTheme.background.opacity(0.55),
+                    TraceWayTheme.background.opacity(0.92)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 280)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .allowsHitTesting(false)
 
-                        HStack {
-                            Button("Cancel", action: viewModel.cancelEditName)
-                                .foregroundStyle(TraceWayTheme.textSecondary)
-                            Spacer()
-                            Button("Save Name", action: viewModel.saveName)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(TraceWayTheme.textOnAccent)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(TraceWayTheme.accent, in: Capsule())
-                        }
-                    } else {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(viewModel.routeName)
-                                .font(.title2.weight(.semibold))
-                                .foregroundStyle(TraceWayTheme.textPrimary)
-                            Spacer()
-                            Button {
-                                viewModel.isEditingName = true
-                            } label: {
-                                Image(systemName: "pencil")
-                                    .foregroundStyle(TraceWayTheme.accent)
-                                    .padding(8)
-                                    .background(TraceWayTheme.surfaceElevated, in: Circle())
-                            }
-                            .accessibilityLabel("Edit route name")
-                        }
+            VStack(spacing: 14) {
+                overlayCard
+
+                HStack(spacing: 10) {
+                    NavigationLink {
+                        ShowRouteQRView(route: viewModel.route)
+                    } label: {
+                        Label("Show QR", systemImage: "qrcode")
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(TraceWayPrimaryButtonStyle())
+                    .accessibilityLabel("Show QR Code")
 
-                    metricRow(title: "Distance", value: TraceWayFormatters.distance(viewModel.route.distanceMeters), emphasize: true)
-                    metricRow(title: "Duration", value: TraceWayFormatters.duration(viewModel.route.durationSeconds), emphasize: true)
-                    metricRow(title: "Recorded", value: TraceWayFormatters.dateTime(viewModel.route.startedAt))
-                    metricRow(title: "GPS quality", value: viewModel.route.quality.displayTitle)
-                    metricRow(title: "Points", value: "\(viewModel.route.orderedPoints.count)")
-
-                    if let start = viewModel.startCoordinate {
-                        metricRow(
-                            title: "Start",
-                            value: String(format: "%.5f, %.5f", start.latitude, start.longitude)
-                        )
+                    Button {
+                        viewModel.prepareShareGPX()
+                        isSharePresented = viewModel.shareURL != nil
+                    } label: {
+                        Label("GPX", systemImage: "square.and.arrow.up")
+                            .frame(maxWidth: .infinity)
                     }
-                    if let end = viewModel.endCoordinate {
-                        metricRow(
-                            title: "End",
-                            value: String(format: "%.5f, %.5f", end.latitude, end.longitude)
-                        )
-                    }
+                    .buttonStyle(TraceWaySecondaryButtonStyle())
+                    .accessibilityLabel("Export GPX")
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .traceWayCard()
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.bottom, 20)
         }
-        .traceWayScreenBackground()
+        .background(TraceWayTheme.background.ignoresSafeArea())
         .navigationTitle("Route")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(TraceWayTheme.surface.opacity(0.92), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    isShareOptionsPresented = true
-                } label: {
-                    Image(systemName: "square.and.arrow.up")
-                }
-                .accessibilityLabel("Share")
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(role: .destructive) {
                     confirmDelete = true
@@ -153,28 +115,6 @@ private struct RouteDetailContent: View {
                 }
                 .accessibilityLabel("Delete route")
             }
-        }
-        .confirmationDialog(
-            "Share route",
-            isPresented: $isShareOptionsPresented,
-            titleVisibility: .visible
-        ) {
-            Button("WhatsApp (location link)") {
-                viewModel.shareViaWhatsApp()
-            }
-            Button("Share GPX file (Mail, Files…)") {
-                viewModel.prepareShareGPX()
-                isSharePresented = viewModel.shareURL != nil
-            }
-            Button("Open in Apple Maps") {
-                viewModel.openInAppleMaps()
-            }
-            Button("Open in Google Maps") {
-                viewModel.openInGoogleMaps()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("WhatsApp gets a tappable Maps location link. Use GPX when you need the exact TraceWay path.")
         }
         .sheet(isPresented: $isSharePresented) {
             if let url = viewModel.shareURL {
@@ -208,16 +148,107 @@ private struct RouteDetailContent: View {
         }
     }
 
-    private func metricRow(title: String, value: String, emphasize: Bool = false) -> some View {
-        HStack {
-            Text(title)
-                .foregroundStyle(TraceWayTheme.textSecondary)
-            Spacer()
-            Text(value)
-                .font(emphasize ? .body.weight(.semibold) : .body)
-                .foregroundStyle(emphasize ? TraceWayTheme.accent : TraceWayTheme.textPrimary)
-                .multilineTextAlignment(.trailing)
+    private var overlayCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if viewModel.isEditingName {
+                TextField("Route name", text: $viewModel.routeName)
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(TraceWayTheme.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .foregroundStyle(TraceWayTheme.textPrimary)
+                    .textInputAutocapitalization(.words)
+
+                HStack {
+                    Button("Cancel", action: viewModel.cancelEditName)
+                        .foregroundStyle(TraceWayTheme.textSecondary)
+                    Spacer()
+                    Button("Save", action: viewModel.saveName)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(TraceWayTheme.textOnAccent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(TraceWayTheme.accent, in: Capsule())
+                }
+            } else {
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(viewModel.routeName)
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(TraceWayTheme.textPrimary)
+                            .lineLimit(2)
+
+                        Text(TraceWayFormatters.dateTime(viewModel.route.startedAt))
+                            .font(.caption)
+                            .foregroundStyle(TraceWayTheme.textSecondary)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Button {
+                        viewModel.isEditingName = true
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(TraceWayTheme.accent)
+                            .frame(width: 36, height: 36)
+                            .background(TraceWayTheme.accent.opacity(0.14), in: Circle())
+                    }
+                    .accessibilityLabel("Edit route name")
+                }
+            }
+
+            HStack(spacing: 0) {
+                metricChip(
+                    icon: "road.lanes",
+                    value: TraceWayFormatters.distance(viewModel.route.distanceMeters)
+                )
+                metricDivider
+                metricChip(
+                    icon: "clock",
+                    value: TraceWayFormatters.duration(viewModel.route.durationSeconds)
+                )
+                metricDivider
+                metricChip(
+                    icon: "calendar",
+                    value: TraceWayFormatters.date(viewModel.route.startedAt)
+                )
+            }
         }
-        .font(.subheadline)
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .environment(\.colorScheme, .dark)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(TraceWayTheme.surface.opacity(0.72))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.4), radius: 24, y: 10)
+        )
+    }
+
+    private var metricDivider: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.08))
+            .frame(width: 1, height: 36)
+    }
+
+    private func metricChip(icon: String, value: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(TraceWayTheme.accent)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(TraceWayTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 }

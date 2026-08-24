@@ -45,7 +45,9 @@ private struct RecordRouteContent: View {
                 routeCoordinates: viewModel.routeCoordinates,
                 showsUserLocation: viewModel.authorizationState.canShowUserLocation && !viewModel.showsCompletionModal,
                 followUser: viewModel.recordingState == .recording || viewModel.recordingState == .idle,
-                fitToRoute: viewModel.recordingState == .paused || viewModel.showsCompletionModal
+                fitToRoute: viewModel.recordingState == .paused || viewModel.showsCompletionModal,
+                bottomContentInset: 220,
+                followZoomMeters: viewModel.recordingState == .recording ? 380 : 280
             )
             .ignoresSafeArea(edges: .bottom)
 
@@ -103,21 +105,12 @@ private struct RecordRouteContent: View {
             isPresented: $viewModel.isShareOptionsPresented,
             titleVisibility: .visible
         ) {
-            Button("WhatsApp (location link)") {
-                viewModel.shareCompletionViaWhatsApp()
-            }
             Button("Share GPX file (Mail, Files…)") {
                 viewModel.prepareAndPresentGPXShare()
             }
-            Button("Open in Apple Maps") {
-                viewModel.openCompletionInAppleMaps()
-            }
-            Button("Open in Google Maps") {
-                viewModel.openCompletionInGoogleMaps()
-            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("WhatsApp gets a tappable Maps location link. Use GPX when you need the exact TraceWay path.")
+            Text("Export a GPX file of the exact path. To share with another TraceWay user, open the route in Routes and tap Show QR Code.")
         }
         .sheet(isPresented: $viewModel.isSharePresented) {
             if let url = viewModel.shareFileURL {

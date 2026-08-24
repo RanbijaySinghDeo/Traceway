@@ -1,0 +1,49 @@
+# Xcode
+.DS_Store
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# SwiftLint
+fastlane/swiftlint-report.txt
+
+# Archives / exports
+*.xcarchive
+*.ipa
+*.app
+
+# Ruby / Bundler
+.vendor/
+.bundle/
+vendor/bundle/
+
+# macOS
+.DS_Store
+
+# Secrets / local configuration
+.env
+.env.*
+*.p8
+*.cer
+*.mobileprovision
+*.p12
