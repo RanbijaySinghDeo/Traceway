@@ -112,11 +112,20 @@ jobs:
                 -configuration Release \
                 -showBuildSettings \
                 | grep -E "CODE_SIGN|PROVISIONING|DEVELOPMENT_TEAM" || true
-
+                
           - name: Build App
             env:
               APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
               APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
               APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
-            run: bundle exec fastlane build
+            run: |
+              echo "=== Starting Fastlane Build ==="
+              bundle exec fastlane build
 
+#          - name: Build App
+#            env:
+#              APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+#              APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+#              APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+#            run: bundle exec fastlane build
+#

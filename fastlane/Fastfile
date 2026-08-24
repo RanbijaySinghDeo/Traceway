@@ -37,18 +37,13 @@ end
 
 desc "Build TraceWay"
 lane :build do
-gym(
-project: "TraceWay.xcodeproj",
-scheme: "TraceWay",
-configuration: "Release",
-clean: true,
-export_method: "app-store",
-export_options: {
-provisioningProfiles: {
-"com.ranbijay.TraceWay" => "match AppStore com.ranbijay.TraceWay"
-}
-}
-)
+  gym(
+    project: "TraceWay.xcodeproj",
+    scheme: "TraceWay",
+    configuration: "Release",
+    clean: true,
+    export_method: "app-store"
+  )
 end
 
 desc "Build and upload to TestFlight"
