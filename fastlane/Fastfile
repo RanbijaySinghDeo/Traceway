@@ -69,6 +69,20 @@ platform :ios do
       api_key: api_key
     )
 
+    # Build number (CFBundleVersion) must be unique for each TestFlight upload.
+    next_build = latest_testflight_build_number(
+      api_key: api_key,
+      app_identifier: "com.ranbijay.TraceWay",
+      initial_build_number: 0
+    ) + 1
+
+    increment_build_number(
+      build_number: next_build,
+      xcodeproj: "TraceWay.xcodeproj"
+    )
+
+    UI.message("Uploading TestFlight build #{next_build} (marketing version stays as set in the project)")
+
     build_app(
       project: "TraceWay.xcodeproj",
       scheme: "TraceWay",
